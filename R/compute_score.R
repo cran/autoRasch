@@ -10,8 +10,6 @@
 #' @param groups_map Matrix to map the respondents to the DIF groups.
 #' @param init_par_iq Initial values of the parameters in the included set before the estimation begin.
 #' @param init_par_oq Initial values of the parameters in the excluded set before the estimation begin.
-#' @param optim_control_iq The optimisation setting of the included set. See \code{\link[stats:optim]{stats::optim()}} \code{control} parameter.
-#' @param optim_control_oq The optimisation setting of the excluded set. See \code{\link[stats:optim]{stats::optim()}} \code{control} parameter.
 #' @param setting_par_iq The coordinate descent optimisation setting of the included set. See \code{\link[autoRasch:autoRaschOptions]{autoRasch::autoRaschOptions()}} \code{cd_control} parameter.
 #' @param setting_par_oq The coordinate descent optimisation setting of the excluded set. See \code{\link[autoRasch:autoRaschOptions]{autoRasch::autoRaschOptions()}} \code{cd_control} parameter.
 #' @param method The implementation option of log likelihood function. \code{fast} using a \code{c++} implementation and \code{novel} using an \code{R} implementation.
@@ -23,10 +21,12 @@
 #'
 #' @examples
 #' ipoqll_score <- compute_score(shortDIF,incl_set = c(1:3),type = "ipoqll")
+#' summary(ipoqll_score)
 #'
 #' \dontrun{
 #' ipoqll_scores <- compute_scores(shortDIF,incl_set = rbind(c(1:3),c(2:4)),
 #'                                 type = "ipoqll", cores = 2)
+#' View(ipoqll_scores)
 #' }
 #'
 #' @importFrom parallel detectCores makeCluster stopCluster
@@ -35,7 +35,6 @@
 #' @export
 compute_score <- function(X, incl_set, type = c("ipoqll","ipoqlldif"), groups_map = c(),
                           init_par_iq = c(), init_par_oq = c(),
-                          optim_control_iq = c(), optim_control_oq = c(),
                           setting_par_iq = c(), setting_par_oq = c(), method = c("fast","novel")){
 
   if(is.null(type)){
@@ -77,7 +76,7 @@ compute_score <- function(X, incl_set, type = c("ipoqll","ipoqlldif"), groups_ma
     if("aR_opt" %in% class(setting_par_iq)){
       setting_iq <- setting_par_iq
     } else {
-      stop("The setting used should be a class of aR_opt!")
+      stop("autoRasch ERROR: The setting used should be a class of `aR_opt'!")
     }
   }
 
@@ -119,7 +118,6 @@ compute_score <- function(X, incl_set, type = c("ipoqll","ipoqlldif"), groups_ma
 
     loglik_oqll <- oqll$loglik
   }
-
 
   ipoqll <- sum(c(iqll$loglik,loglik_oqll),na.rm = TRUE)
   res <- c(iqll$loglik, loglik_oqll, ipoqll)
@@ -289,15 +287,15 @@ compute_score <- function(X, incl_set, type = c("ipoqll","ipoqlldif"), groups_ma
   names(res) <- c("IQ-LL","OQ-LL",scoreName,rep("item no.",length(incl_set)),rep("iq-ll par.",length(iqll_params)),rep("oq-ll par.",length(oqll_params)))
   # res <- c(res, incl_set)
   # names(res) <- c("IQ-LL","OQ-LL",scoreName, rep("item no.",ncol(dset)))
-  class(res) <- c(class(res),"score",type[1])
+  class(res) <- c("score",type[1],class(res))
   return(res)
 
 }
 
 compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlldif"),
                                         step_direct = c("fixed","forward","backward"), groups_map = c(),
-                                        init_par_iq = c(), init_par_oq = c(), optim_control_iq = c(), optim_control_oq = c(),
-                                        setting_par_iq = c(), setting_par_oq = c(), method = c("fast","novel"), timeLimit = 3600){
+                                        init_par_iq = c(), init_par_oq = c(), setting_par_iq = c(),
+                                        setting_par_oq = c(), method = c("fast","novel"), timeLimit = 3600){
 
 
   dset <- as.matrix(X)
@@ -327,6 +325,7 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
   } else if(step_direct[1] == "backward"){
     incl_sets <- t(combn(incl_sets,(length(incl_sets)-1)))
   } else if(step_direct[1] == "fixed"){
+    incl_sets <- as.matrix(incl_sets)
     if((any(class(incl_sets) == "matrix")) & (dim(incl_sets)[2] == 1 | dim(incl_sets)[1] == 1)){
       incl_sets <- matrix(as.vector(incl_sets), ncol = 1)
     }
@@ -336,7 +335,7 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
 
   i <- NULL
 
-  scoreList <- foreach(i=seq_len(nrow(incl_sets)), .combine = rbind, .errorhandling = "remove") %dopar% {
+  scoreList <- foreach(i=seq_len(nrow(incl_sets)), .combine = rbind, .errorhandling = "stop") %dopar% {
 
     incl_set <- incl_sets[i,]
     incl_set <- incl_set[!is.na(incl_set)]
@@ -379,7 +378,6 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
           setTimeLimit(elapsed = timeLimit)
           score_res <- compute_score(dset, incl_set = incl_set, type = type, groups_map = groups_map,
                                      init_par_iq = init_iq, init_par_oq = init_oq,
-                                     optim_control_iq = optim_control_iq, optim_control_oq = optim_control_oq,
                                      setting_par_iq = setting_par_iq, setting_par_oq = setting_par_oq,
                                      method = method)
           res <- c(score_res)
@@ -396,7 +394,6 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
     return(res)
   }
 
-
   res <- scoreList
 
   return(res)
@@ -407,7 +404,7 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
 #' @param step_direct How will you compute the criterion score. \code{fixed} for the given itemset,
 #' \code{forward} computes all the scores of the possible combination of items if an item is added to the given set,
 #' \code{backward}  computes all the scores of the possible combination of items if an item is removed to the given set.
-#' @param timeLimit The maximum excution time to compute the criterion score. Exceeding the setting time, the computation will be halted.
+#' @param timeLimit To limit the execution time of scores' computation.
 #'
 #' @return
 #' \code{compute_scores} will return a matrix as a result of the \code{rbind} operation of the \code{compute_score}'s result.
@@ -419,12 +416,12 @@ compute_scores_unparalleled <- function(X, incl_sets, type = c("ipoqll","ipoqlld
 #' @export
 compute_scores <- function(X, incl_sets, type = c("ipoqll","ipoqlldif"),
                            step_direct = c("fixed","forward","backward"), groups_map = c(),
-                           init_par_iq = c(), init_par_oq = c(), optim_control_iq = c(), optim_control_oq = c(),
+                           init_par_iq = c(), init_par_oq = c(),
                            setting_par_iq = c(), setting_par_oq = c(),
                            cores = NULL, method = c("fast","novel"), timeLimit = 3600){
 
 
-  incl_sets <- as.matrix(incl_sets)
+  # incl_sets <- as.matrix(incl_sets)
 
   if(is.null(cores)){
     cores <- nrow(incl_sets)
@@ -442,16 +439,17 @@ compute_scores <- function(X, incl_sets, type = c("ipoqll","ipoqlldif"),
   # if(checkOS['sysname'] == "Linux"){
   #   doParallel::registerDoParallel(cores = cores)
   # } else {
-    cl <- parallel::makeCluster(cores)
     # oFuture::registerDoFuture()
     # future::plan(future::cluster, workers = cl)
+    cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl=cl, cores = cores)
+    # doParallel::registerDoParallel(cores = cores)
+    parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths())
   # }
 
   scoreList <- compute_scores_unparalleled(X = X, incl_sets = incl_sets, type = type,
                                            step_direct = step_direct, groups_map = groups_map,
                                           init_par_iq = init_par_iq, init_par_oq = init_par_oq,
-                                          optim_control_iq = optim_control_iq, optim_control_oq = optim_control_oq,
                                           setting_par_iq = setting_par_iq, setting_par_oq = setting_par_oq, method = method, timeLimit = timeLimit)
 
   # checkOS <- Sys.info()

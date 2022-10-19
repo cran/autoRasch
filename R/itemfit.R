@@ -6,7 +6,6 @@
 #' @param obj The object of class \code{'pcm'} or \code{'pcmdif'}.
 #' @param isAlpha Boolean value that indicates whether the discrimination parameters is needed to be estimated or not.
 #' The discrimination parameters are estimated using the corresponding models (GPCM or GPCM-DIF).
-#' @param isTraced A list of some matrices, i.e., the expected values, the variances, the curtosis, and the standardized residual matrix.
 #'
 #' @return
 #' \strong{\code{fitStats()} will return a \code{\link[base:list]{list}} which contains:}
@@ -35,10 +34,10 @@
 #'
 #' @rdname fit
 #' @export
-fitStats <- function (obj, isAlpha = TRUE, isTraced = FALSE) {
+fitStats <- function (obj, isAlpha = TRUE) {
 
   if(!("pcm" %in% class(obj)) & !("pcmdif" %in% class(obj))){
-    stop("autoRasch ERROR: itemfit is only for rasch and pcm object.")
+    stop("autoRasch ERROR: itemfit is only for pcm and pcmdif object.")
   }
   UseMethod("fitStats", obj)
 }
@@ -228,9 +227,28 @@ residCor <- function(objFit){
   return(corLD)
 }
 
-summary.ld <- function(objLD, LDth = c(0.3)){
+#' @rdname ld
+#'
+#' @export
+corResid <- function(objFit){
+  corLD <- residCor(objFit)
+  return(corLD)
+}
+
+#' @param object The object of class \code{'ld'}.
+#' @param ... Further arguments to be passed.
+#'
+#' @rdname ld
+#' @export
+summary.ld <- function(object, ...){
+  dotdotdot <- list(...)
+  if(!is.null(dotdotdot$LDth)){
+    LDth <- c(dotdotdot$LDth)
+  } else {
+    LDth <- c(0.3)
+  }
   if(length(LDth) == 1){
-    idx <- which((objLD >= LDth & objLD < 1), arr.ind = TRUE)
+    idx <- which((object >= LDth & object < 1), arr.ind = TRUE)
     idx <- idx[which(!duplicated(t(apply(idx,1,sort)))),]
     numLD <- nrow(idx)#/2
 
@@ -240,12 +258,12 @@ summary.ld <- function(objLD, LDth = c(0.3)){
     if(numLD > 0){
       # idx <- idx[1:(nrow(idx)/2),]
       for (i in 1:numLD) {
-        txt <- paste(i,". ",colnames(objLD)[idx[i,1]]," and ",colnames(objLD)[idx[i,2]],sep = "")
+        txt <- paste(i,". ",colnames(object)[idx[i,1]]," and ",colnames(object)[idx[i,2]],sep = "")
         cat(txt,"\n")
       }
     }
   } else {
-    idxPos <- which((objLD >= LDth[1] & objLD < 1), arr.ind = TRUE)
+    idxPos <- which((object >= LDth[1] & object < 1), arr.ind = TRUE)
     idxPos <- idxPos[which(!duplicated(t(apply(idxPos,1,sort)))),]
     numLD <- nrow(idxPos)#/2
 
@@ -255,12 +273,12 @@ summary.ld <- function(objLD, LDth = c(0.3)){
     if(numLD > 0){
       # idx <- idx[1:(nrow(idx)/2),]
       for (i in 1:numLD) {
-        txt <- paste(i,". ",colnames(objLD)[idxPos[i,1]]," and ",colnames(objLD)[idxPos[i,2]],sep = "")
+        txt <- paste(i,". ",colnames(object)[idxPos[i,1]]," and ",colnames(object)[idxPos[i,2]],sep = "")
         cat(txt,"\n")
       }
     }
 
-    idxNeg <- which((objLD <= LDth[2]), arr.ind = TRUE)
+    idxNeg <- which((object <= LDth[2]), arr.ind = TRUE)
     idxNeg <- idxNeg[which(!duplicated(t(apply(idxNeg,1,sort)))),]
     numLD <- nrow(idxNeg)#/2
 
@@ -269,7 +287,7 @@ summary.ld <- function(objLD, LDth = c(0.3)){
     if(numLD > 0){
       # idx <- idx[1:(nrow(idx)/2),]
       for (i in 1:numLD) {
-        txt <- paste(i,". ",colnames(objLD)[idxNeg[i,1]]," and ",colnames(objLD)[idxNeg[i,2]],sep = "")
+        txt <- paste(i,". ",colnames(object)[idxNeg[i,1]]," and ",colnames(object)[idxNeg[i,2]],sep = "")
         cat(txt,"\n")
       }
     }

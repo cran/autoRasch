@@ -13,8 +13,6 @@ compute_score(
   groups_map = c(),
   init_par_iq = c(),
   init_par_oq = c(),
-  optim_control_iq = c(),
-  optim_control_oq = c(),
   setting_par_iq = c(),
   setting_par_oq = c(),
   method = c("fast", "novel")
@@ -28,8 +26,6 @@ compute_scores(
   groups_map = c(),
   init_par_iq = c(),
   init_par_oq = c(),
-  optim_control_iq = c(),
-  optim_control_oq = c(),
   setting_par_iq = c(),
   setting_par_oq = c(),
   cores = NULL,
@@ -52,10 +48,6 @@ compute_scores(
 
 \item{init_par_oq}{Initial values of the parameters in the excluded set before the estimation begin.}
 
-\item{optim_control_iq}{The optimisation setting of the included set. See \code{\link[stats:optim]{stats::optim()}} \code{control} parameter.}
-
-\item{optim_control_oq}{The optimisation setting of the excluded set. See \code{\link[stats:optim]{stats::optim()}} \code{control} parameter.}
-
 \item{setting_par_iq}{The coordinate descent optimisation setting of the included set. See \code{\link[autoRasch:autoRaschOptions]{autoRasch::autoRaschOptions()}} \code{cd_control} parameter.}
 
 \item{setting_par_oq}{The coordinate descent optimisation setting of the excluded set. See \code{\link[autoRasch:autoRaschOptions]{autoRasch::autoRaschOptions()}} \code{cd_control} parameter.}
@@ -70,7 +62,7 @@ compute_scores(
 
 \item{cores}{Number of cores that is used in the paralellization.}
 
-\item{timeLimit}{The maximum excution time to compute the criterion score. Exceeding the setting time, the computation will be halted.}
+\item{timeLimit}{To limit the execution time of scores' computation.}
 
 \item{object}{The object from the class \code{score}. The result of the score computation.}
 
@@ -90,10 +82,12 @@ the given initial survey simultanously.
 }
 \examples{
 ipoqll_score <- compute_score(shortDIF,incl_set = c(1:3),type = "ipoqll")
+summary(ipoqll_score)
 
 \dontrun{
 ipoqll_scores <- compute_scores(shortDIF,incl_set = rbind(c(1:3),c(2:4)),
                                 type = "ipoqll", cores = 2)
+View(ipoqll_scores)
 }
 
 }
